@@ -38,6 +38,10 @@
         <canvas id="waterChart"></canvas>
     </div>
 
+    <div class="chart-container">
+        <canvas id="trendChart"></canvas>
+    </div>
+
     <div class="summary">
         <div class="stat-card leaks">
             <strong>Lost to Leaks</strong>
@@ -145,6 +149,82 @@ async function initDashboard() {
                 }
             }
         });
+        // --- Time series for last 3 years (line chart with 4 lines) ---
+        try {
+            const today = new Date();
+            const start = new Date();
+            start.setFullYear(today.getFullYear() - 3);
+            const pad = n => n.toString().padStart(2, '0');
+            const startStr = `${start.getFullYear()}/${pad(start.getMonth()+1)}/${pad(start.getDate())}`;
+
+            // paginate through ArcGIS results (server maxRecordCount ~1000-2000)
+            const batch = 1000;
+            let offset = 0;
+            let allFeatures = [];
+            while (true) {
+                const tsParams = new URLSearchParams({
+                    where: `METRIC_DATE >= '${startStr}' AND TOTAL_CALGARY_ML IS NOT NULL`,
+                    outFields: 'METRIC_DATE,TOTAL_CALGARY_ML',
+                    orderByFields: 'METRIC_DATE ASC',
+                    resultOffset: String(offset),
+                    resultRecordCount: String(batch),
+                    f: 'json'
+                });
+                const tsUrl = `${arcgisBase}?${tsParams.toString()}`;
+                const tsRes = await fetch(tsUrl);
+                if (!tsRes.ok) throw new Error(`Time series fetch failed: ${tsRes.status} ${tsRes.statusText}`);
+                const tsJson = await tsRes.json();
+                if (!tsJson || !tsJson.features) break;
+                allFeatures = allFeatures.concat(tsJson.features.map(f => f.attributes));
+                if (tsJson.features.length < batch) break;
+                offset += batch;
+            }
+
+            if (allFeatures.length === 0) throw new Error('No time series data returned for last 3 years');
+
+            const labels = allFeatures.map(a => a.METRIC_DATE.replace(/\//g,'-'));
+            const totals = allFeatures.map(a => parseFloat(a.TOTAL_CALGARY_ML));
+            const leaksArr = totals.map(t => +(t * leakPercent).toFixed(1));
+            const citizensArr = totals.map(t => +(t * usagePercent * resPercent).toFixed(1));
+            const industryArr = totals.map(t => +(t * usagePercent * iciPercent).toFixed(1));
+            const regionalArr = totals.map(t => +(t * usagePercent * regPercent).toFixed(1));
+
+            const ctx = document.getElementById('trendChart');
+            const trendChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [
+                        { label: 'Leaks (MLD)', data: leaksArr, borderColor: '#e74c3c', fill: false, tension: 0.2 },
+                        { label: 'Citizen Usage (MLD)', data: citizensArr, borderColor: '#3498db', fill: false, tension: 0.2 },
+                        { label: 'Industry (MLD)', data: industryArr, borderColor: '#f39c12', fill: false, tension: 0.2 },
+                        { label: 'Regional (MLD)', data: regionalArr, borderColor: '#9b59b6', fill: false, tension: 0.2 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'nearest', intersect: false },
+                    plugins: { tooltip: { mode: 'index', intersect: false } },
+                    scales: { y: { beginAtZero: true, title: { display: true, text: 'MLD' } } },
+                    onClick: (evt) => {
+                        const points = trendChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
+                        if (points.length) {
+                            const idx = points[0].index;
+                            // update summary cards with clicked index values
+                            document.getElementById('val-leaks').innerText = leaksArr[idx] + ' MLD';
+                            document.getElementById('val-citizens').innerText = citizensArr[idx] + ' MLD';
+                            document.getElementById('val-industry').innerText = industryArr[idx] + ' MLD';
+                            document.getElementById('val-regional').innerText = regionalArr[idx] + ' MLD';
+                            const dateEl = document.getElementById('data-date');
+                            if (dateEl) dateEl.innerText = `Data date: ${labels[idx]}`;
+                        }
+                    }
+                }
+            });
+        } catch (e) {
+            console.warn('Time series chart not rendered:', e);
+        }
     } catch (err) {
         console.error("Dashboard Fetch Error:", err);
         const banner = document.getElementById('error-banner');
