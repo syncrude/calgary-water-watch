@@ -72,15 +72,22 @@
 <script>
 async function initDashboard() {
     try {
-        // Source URL from provided documentation references for daily demand [cite: 14, 91]
-        const url = 'https://data.calgary.ca/resource/vax6-p8ay.json?$order=date DESC&$limit=1&$where=total_daily_flow IS NOT NULL';
+        // Query the CEAS – Water Demand Daily ArcGIS FeatureService (table id 15)
+        const arcgisBase = 'https://services1.arcgis.com/AVP60cs0Q9PEA8rH/arcgis/rest/services/CEAS_%E2%80%93_Water_Demand_Daily/FeatureServer/15/query';
+        const arcgisParams = new URLSearchParams({
+            where: 'TOTAL_CALGARY_ML IS NOT NULL',
+            outFields: 'METRIC_DATE,TOTAL_CALGARY_ML',
+            orderByFields: 'METRIC_DATE DESC',
+            resultRecordCount: '1',
+            f: 'json'
+        });
+        const url = `${arcgisBase}?${arcgisParams.toString()}`;
         const res = await fetch(url);
-        const data = await res.json();
-
-        if (!data || data.length === 0) throw new Error("API response was empty");
-
-        const latest = data[0];
-        const total = parseFloat(latest.total_daily_flow); // The "System-wide treatment plant outflow" [cite: 33]
+        if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+        const arc = await res.json();
+        if (!arc || !arc.features || arc.features.length === 0) throw new Error('No features returned from CEAS daily feed');
+        const latest = arc.features[0].attributes;
+        const total = parseFloat(latest.TOTAL_CALGARY_ML); // in Million Litres per Day (MLD)
 
         // Math breakdown based on "Calgary Water Demand Data Source" 
         // 22% of total demand is lost to leaks 
@@ -130,7 +137,9 @@ async function initDashboard() {
         });
     } catch (err) {
         console.error("Dashboard Fetch Error:", err);
-        document.getElementById('error-banner').style.display = 'block';
+        const banner = document.getElementById('error-banner');
+        banner.innerText = `⚠️ Failed to load daily data (${err.message}). Falling back to historical estimates.`;
+        banner.style.display = 'block';
     }
 }
 initDashboard();
