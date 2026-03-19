@@ -32,6 +32,7 @@
     
     <h1>Calgary Water: The Transparency Project</h1>
     <p class="subtitle">Visualizing the <b>22% baseline leak rate</b> against daily system production.</p>
+    <div id="data-date" style="color:#555; margin-bottom:10px;">Data date: —</div>
 
     <div class="chart-container">
         <canvas id="waterChart"></canvas>
@@ -88,6 +89,15 @@ async function initDashboard() {
         if (!arc || !arc.features || arc.features.length === 0) throw new Error('No features returned from CEAS daily feed');
         const latest = arc.features[0].attributes;
         const total = parseFloat(latest.TOTAL_CALGARY_ML); // in Million Litres per Day (MLD)
+        // Show the metric date from the CEAS feed
+        try {
+            const metricDate = latest.METRIC_DATE; // format like YYYY/MM/DD
+            const displayDate = metricDate ? metricDate.split('/').join('-') : 'unknown';
+            const dateEl = document.getElementById('data-date');
+            if (dateEl) dateEl.innerText = `Data date: ${displayDate}`;
+        } catch (e) {
+            console.warn('Could not parse metric date', e);
+        }
 
         // Math breakdown based on "Calgary Water Demand Data Source" 
         // 22% of total demand is lost to leaks 
