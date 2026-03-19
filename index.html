@@ -39,6 +39,7 @@
     </div>
 
     <div class="chart-container">
+        <div id="selected-line" style="color:#333; margin-bottom:8px; font-weight:600">Selected: —</div>
         <canvas id="trendChart"></canvas>
     </div>
 
@@ -190,6 +191,7 @@ async function initDashboard() {
             const regionalArr = totals.map(t => +(t * usagePercent * regPercent).toFixed(1));
 
             const ctx = document.getElementById('trendChart');
+            const selectedEl = document.getElementById('selected-line');
             const trendChart = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -211,6 +213,7 @@ async function initDashboard() {
                         const points = trendChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
                         if (points.length) {
                             const idx = points[0].index;
+                            const ds = points[0].datasetIndex;
                             // update summary cards with clicked index values
                             document.getElementById('val-leaks').innerText = leaksArr[idx] + ' MLD';
                             document.getElementById('val-citizens').innerText = citizensArr[idx] + ' MLD';
@@ -218,10 +221,23 @@ async function initDashboard() {
                             document.getElementById('val-regional').innerText = regionalArr[idx] + ' MLD';
                             const dateEl = document.getElementById('data-date');
                             if (dateEl) dateEl.innerText = `Data date: ${labels[idx]}`;
+                            // visually select the dataset (line)
+                            selectDataset(ds);
                         }
                     }
                 }
             });
+            // selection helper: highlight selected dataset by index
+            function selectDataset(dsIndex) {
+                if (!trendChart || !trendChart.data || !trendChart.data.datasets) return;
+                trendChart.data.datasets.forEach((d, i) => {
+                    d.borderWidth = (i === dsIndex) ? 4 : 2;
+                    d.pointRadius = (i === dsIndex) ? 5 : 0;
+                    d.pointHoverRadius = (i === dsIndex) ? 6 : 0;
+                });
+                trendChart.update();
+                if (selectedEl) selectedEl.innerText = `Selected: ${trendChart.data.datasets[dsIndex].label}`;
+            }
         } catch (e) {
             console.warn('Time series chart not rendered:', e);
         }
