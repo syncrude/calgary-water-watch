@@ -37,6 +37,35 @@
     <div class="chart-container">
         <canvas id="waterChart"></canvas>
     </div>
+    <div id="saddledome-block" style="margin-top:12px; padding:12px; border-radius:8px; background:#fff4f6; border:1px solid #f5dbe0;">
+        <strong>Dome of Waste Water</strong>
+        <div style="display:flex; gap:16px; align-items:center; margin-top:8px;">
+            <div style="flex:1; max-width:420px;">
+                <!-- Embedded SVG from saddledome.html (visual + masked water) -->
+                <svg id="saddledome-svg" class="svg-visualizer" viewBox="0 0 900 450" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;">
+                    <defs>
+                        <linearGradient id="waterGradIndex" x1="0" x2="0" y1="0" y2="1">
+                            <stop offset="0%" stop-color="#4299e1" />
+                            <stop offset="100%" stop-color="#2c5282" />
+                        </linearGradient>
+                        <mask id="domeMaskIndex">
+                            <path d="M 120,350 L 120,130 C 120,130 450,450 780,130 L 780,350 Z" fill="white" />
+                        </mask>
+                    </defs>
+                    <rect x="0" y="350" width="900" height="100" fill="#edf2f7" />
+                    <path d="M 120,350 L 120,130 C 120,130 450,450 780,130 L 780,350 Z" fill="#f1f5f9" stroke="#cbd5e0" stroke-width="2" />
+                    <rect x="0" y="0" width="900" height="450" fill="url(#waterGradIndex)" mask="url(#domeMaskIndex)" id="waterRectIndex" />
+                    <path id="waterSurfacePathIndex" d="M 0,0 V 0 H 900 V 450 H 0 Z" fill="#ffffff" mask="url(#domeMaskIndex)" />
+                </svg>
+            </div>
+            <div style="flex:1; min-width:220px; text-align:left;">
+                <div style="font-size:0.95rem; color:#334">City leak volume (MLD): <b id="dome-ml">—</b></div>
+                <div style="margin-top:8px; font-size:0.95rem; color:#334">Equivalent of dome capacity (330 ML): <b id="dome-percent">—</b>%</div>
+                <div style="margin-top:8px; font-size:0.95rem; color:#334">Litres: <b id="dome-litres">—</b></div>
+                <div id="saddledome-text" style="margin-top:10px; color:#234; font-weight:600">—</div>
+            </div>
+        </div>
+    </div>
 
     <div class="chart-container">
         <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
@@ -68,6 +97,11 @@
             <strong>Regional Partners</strong>
             <div id="val-regional">-- MLD</div>
         </div>
+    </div>
+
+    <div id="saddledome-block" style="margin-top:18px; padding:16px; border-radius:8px; background:#f7fbff; border:1px solid #e6f0fb;">
+        <strong>Saddledome Equivalent</strong>
+        <div id="saddledome-text" style="margin-top:8px; color:#234;">—</div>
     </div>
 
     <div class="logic-box">
@@ -143,6 +177,57 @@ async function initDashboard() {
         document.getElementById('val-citizens').innerText = stats.citizens + " MLD";
         document.getElementById('val-industry').innerText = stats.industry + " MLD";
         document.getElementById('val-regional').innerText = stats.regional + " MLD";
+
+        // Dome of Waste Water (capacity in ML)
+        const DOME_CAPACITY_ML = 330; // capacity per Dome of Waste Water
+        // DOM visual constants (match the embedded SVG coordinates)
+        const START_Y = 350;
+        const END_CENTER_Y = 300;
+        const END_SIDE_Y = 160;
+
+        function updateSaddledomeDisplay(leakML, label) {
+            const textBlock = document.getElementById('saddledome-text');
+            const mlEl = document.getElementById('dome-ml');
+            const pctEl = document.getElementById('dome-percent');
+            const litresEl = document.getElementById('dome-litres');
+            const pathEl = document.getElementById('waterSurfacePathIndex');
+            if (!textBlock) return;
+
+            const pct = Math.max(0, Math.min(100, (leakML / DOME_CAPACITY_ML) * 100));
+            const pctRounded = Math.round(pct);
+            const liters = Math.round(leakML * 1_000_000).toLocaleString();
+
+            // update numeric fields
+            if (mlEl) mlEl.innerText = leakML.toFixed(1) + ' MLD';
+            if (pctEl) pctEl.innerText = pctRounded.toString();
+            if (litresEl) litresEl.innerText = liters + ' L';
+
+            // draw water surface path using same curve calibration as saddledome.html
+            if (pathEl) {
+                const sideY = START_Y - ((pct/100) * (START_Y - END_SIDE_Y));
+                const centerY = START_Y - ((pct/100) * (START_Y - END_CENTER_Y));
+                const d = `M 0,0 V ${sideY} C 120,${sideY} 450,${centerY} 780,${sideY} V 0 H 0 Z`;
+                pathEl.setAttribute('d', d);
+            }
+
+            // textual summary
+            const count = leakML / DOME_CAPACITY_ML;
+            const countFmt = (Math.round(count * 100) / 100).toFixed(2);
+            let extraText = '';
+            if (count >= 1) {
+                const full = Math.floor(count);
+                const remainderML = Math.round((count - full) * DOME_CAPACITY_ML * 10) / 10;
+                extraText = ` — ${countFmt} domes (${full} full + ${remainderML} ML)`;
+            } else {
+                const partPct = Math.round(count * 100);
+                const partML = Math.round(count * DOME_CAPACITY_ML * 10) / 10;
+                extraText = ` — ${partPct}% of a dome (${partML} ML)`;
+            }
+            textBlock.innerText = `${label}: ${leakML.toFixed(1)} MLD (${liters} L)${extraText}`;
+        }
+
+        // initial dome display for the latest day showing only city's leaked volume
+        updateSaddledomeDisplay(statsNum.leaks, `City Loss (Leaks) — ${latestDateStr}`);
 
         // Render Graph (summary bar chart)
         const summaryChart = new Chart(document.getElementById('waterChart'), {
@@ -245,6 +330,8 @@ async function initDashboard() {
                                 summaryChart.data.datasets[0].data = [leaksArr[idx], citizensArr[idx], industryArr[idx], regionalArr[idx]];
                                 summaryChart.data.datasets[0].label = `Millions of Litres per Day (Date: ${labels[idx]})`;
                                 summaryChart.update();
+                                // update Dome of Waste Water display for clicked date (leaks only)
+                                try { updateSaddledomeDisplay(leaksArr[idx], `City Loss (Leaks) — ${labels[idx]}`); } catch(e) { }
                             }
                         }
                     }
@@ -340,6 +427,11 @@ async function initDashboard() {
                         summaryChart.data.datasets[0].data = [Number(sumLeaks), Number(sumCit), Number(sumInd), Number(sumReg)];
                         summaryChart.data.datasets[0].label = `Total (sum) MLD over ${labels[a]} → ${labels[bIdx]}`;
                         summaryChart.update();
+                        // update Dome of Waste Water display for the selected range (sum of leaks only)
+                        try {
+                            const totalLeakRange = Number(sumLeaks);
+                            updateSaddledomeDisplay(totalLeakRange, `City Loss (Leaks) — ${labels[a]} → ${labels[bIdx]}`);
+                        } catch(e) { }
                     }
                     setTimeout(clearRect, 1200);
                 });
@@ -363,6 +455,7 @@ async function initDashboard() {
                                 // update selected/date labels
                                 const dateEl = document.getElementById('data-date'); if (dateEl) dateEl.innerText = `Data date: ${latestDateStr}`;
                                 if (selectedEl) selectedEl.innerText = `Selected: Latest (${latestDateStr})`;
+                                try { updateSaddledomeDisplay(latestStatsNum.leaks, `City Loss (Leaks) — ${latestDateStr}`); } catch(e) { }
                             });
                         }
                     } catch (e) { console.warn('Could not bind clear button', e); }
