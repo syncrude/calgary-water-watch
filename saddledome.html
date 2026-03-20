@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calgary Water Loss: The Saddledome</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #e2e8f0; color: #2d3748; margin: 0; padding: 20px; text-align: center; }
+        .container { max-width: 950px; margin: auto; background: white; padding: 32px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        h1 { color: #1a365d; margin: 0; font-weight: 800; }
+        .subtitle { color: #718096; margin-bottom: 20px; font-size: 0.9rem; }
+        .svg-visualizer { width: 100%; height: auto; max-width: 850px; margin: 0 auto; display: block; background: linear-gradient(to bottom, #d6e4f0, #ffffff); border-radius: 12px; border: 1px solid #cbd5e0; }
+        .controls { background: #f8fafc; padding: 24px; border-radius: 12px; border: 1px solid #edf2f7; margin-top: 20px; }
+        .slider-container { display: flex; align-items: center; justify-content: center; gap: 15px; margin: 15px 0; }
+        input[type=range] { width: 60%; cursor: pointer; }
+        .stat-display { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .stat-box { background: white; padding: 12px; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .stat-box b { font-size: 1.3rem; color: #2b6cb0; display: block; }
+        .alert-box { margin-top: 15px; padding: 10px; background: #fffaf0; border: 1px solid #fbd38d; border-radius: 8px; font-size: 0.9rem; }
+        .leaks-label { color: #c53030; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Saddledome Volume Visualizer</h1>
+    <p class="subtitle">Visualizing daily Calgary water loss relative to stadium capacity</p>
+
+    <svg class="svg-visualizer" viewBox="0 0 900 450" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <linearGradient id="waterGrad" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stop-color="#4299e1" />
+                <stop offset="100%" stop-color="#2c5282" />
+            </linearGradient>
+            
+            <mask id="domeMask">
+                <path d="M 120,350 L 120,130 C 120,130 450,450 780,130 L 780,350 Z" fill="white" />
+            </mask>
+        </defs>
+
+        <g fill="#cbd5e0" opacity="0.6">
+            <rect x="50" y="200" width="40" height="150" /> <rect x="100" y="150" width="50" height="200" /> <path d="M 170,350 V 90 H 210 V 350 Z" /> <rect x="250" y="230" width="10" height="120" /> <ellipse cx="255" cy="230" rx="25" ry="10" /> <rect x="245" y="220" width="20" height="10" /> <ellipse cx="255" cy="220" rx="25" ry="8" /> <rect x="254" y="190" width="2" height="30" /> <rect x="300" y="180" width="45" height="170" /> <rect x="550" y="120" width="60" height="230" /> <rect x="620" y="160" width="40" height="190" />
+            <rect x="680" y="210" width="50" height="140" />
+        </g>
+
+        <rect x="0" y="350" width="900" height="100" fill="#edf2f7" />
+
+        <path d="M 120,350 L 120,130 C 120,130 450,450 780,130 L 780,350 Z" fill="#f1f5f9" stroke="#cbd5e0" stroke-width="2" />
+
+        <rect x="0" y="0" width="900" height="450" fill="url(#waterGrad)" mask="url(#domeMask)" id="waterRect" />
+
+        <path id="waterSurfacePath" d="M 0,0 H 900 V 450 H 0 Z" fill="#ffffff" mask="url(#domeMask)" />
+
+        <rect x="85" y="210" width="45" height="140" rx="4" fill="#e53e3e" />
+        <rect x="770" y="210" width="45" height="140" rx="4" fill="#e53e3e" />
+
+        <path d="M 70,115 C 70,115 450,470 830,115" fill="none" stroke="#ffffff" stroke-width="24" stroke-linecap="round" />
+        <path d="M 70,115 C 70,115 450,470 830,115" fill="none" stroke="#cbd5e0" stroke-width="2" stroke-linecap="round" />
+    </svg>
+
+    <div class="controls">
+        <div class="slider-container">
+            <span>Empty</span>
+            <input type="range" id="fillSlider" min="0" max="100" value="35">
+            <span>Full</span>
+        </div>
+        
+        <div class="stat-display">
+            <div class="stat-box">
+                <span class="label">Dome Status</span>
+                <b><span id="percentDisplay">35</span>%</b>
+            </div>
+            <div class="stat-box">
+                <span class="label">Equivalent Volume</span>
+                <b><span id="volumeDisplay">115.5</span> ML</b>
+            </div>
+        </div>
+
+        <div class="alert-box">
+            A typical daily leak (~115 ML) fills the dome to <b class="leaks-label">35%</b>.
+        </div>
+    </div>
+</div>
+
+<script>
+    const slider = document.getElementById('fillSlider');
+    const surfacePath = document.getElementById('waterSurfacePath');
+    const percentDisplay = document.getElementById('percentDisplay');
+    const volumeDisplay = document.getElementById('volumeDisplay');
+
+    function updateFill() {
+        const pct = parseFloat(slider.value);
+        
+        // CALIBRATED RISE LOGIC:
+        // We set specific starting (0%) and ending (100%) coordinates for the center and sides.
+
+        // START (Empty) at y=350
+        const START_Y = 350;
+
+        // END (100% Full) coordinates:
+        const END_CENTER_Y = 300; // Water center stays low at the dip
+        const END_SIDE_Y = 160;   // Water rises high, but stays *below* pylons (which are at 130)
+
+        // Linear interpolation for current level
+        const sideY = START_Y - ((pct/100) * (START_Y - END_SIDE_Y));
+        const centerY = START_Y - ((pct/100) * (START_Y - END_CENTER_Y));
+        
+        // The path hides everything ABOVE the water line
+        const d = `M 0,0 
+                   V ${sideY} 
+                   C 120,${sideY} 450,${centerY} 780,${sideY} 
+                   V 0 
+                   H 0 Z`;
+        
+        surfacePath.setAttribute('d', d);
+        
+        percentDisplay.innerText = Math.round(pct);
+        volumeDisplay.innerText = ((pct / 100) * 330).toFixed(1);
+    }
+
+    slider.addEventListener('input', updateFill);
+    updateFill(); // Initial load
+</script>
+</body>
+</html>
