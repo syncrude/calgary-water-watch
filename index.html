@@ -37,11 +37,22 @@
     <div class="chart-container">
         <canvas id="waterChart"></canvas>
     </div>
-    <div id="saddledome-block" style="margin-top:12px; padding:12px; border-radius:8px; background:#fff4f6; border:1px solid #f5dbe0;">
-        <strong>Dome of Waste Water</strong>
-        <div style="display:flex; gap:16px; align-items:center; margin-top:8px;">
+    <div id="saddledome-block" style="margin-top:12px; text-align:center;">
+        <h2 id="dome-headline" style="margin:0; font-size:1.6rem; font-weight:700;">—</h2>
+    </div>
+
+    <div class="chart-container">
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
+            <div id="selected-line" style="color:#333; font-weight:600">Selected: —</div>
+            <button id="clear-range-btn" style="margin-left:auto; padding:6px 10px; border-radius:6px; border:1px solid #ccc; background:#fff; cursor:pointer">Clear range</button>
+        </div>
+        <canvas id="trendChart"></canvas>
+    </div>
+    
+    <!-- visual block moved below trend chart -->
+    <div id="saddledome-visual-block" style="margin-top:12px; padding:12px; border-radius:8px; background:#fff4f6; border:1px solid #f5dbe0;">
+        <div style="display:flex; gap:16px; align-items:center;">
             <div style="flex:1; max-width:420px;">
-                <!-- Embedded SVG from saddledome.html (visual + masked water) -->
                 <svg id="saddledome-svg" class="svg-visualizer" viewBox="0 0 900 450" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;">
                     <defs>
                         <linearGradient id="waterGradIndex" x1="0" x2="0" y1="0" y2="1">
@@ -65,14 +76,6 @@
                 <div id="saddledome-text" style="margin-top:10px; color:#234; font-weight:600">—</div>
             </div>
         </div>
-    </div>
-
-    <div class="chart-container">
-        <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
-            <div id="selected-line" style="color:#333; font-weight:600">Selected: —</div>
-            <button id="clear-range-btn" style="margin-left:auto; padding:6px 10px; border-radius:6px; border:1px solid #ccc; background:#fff; cursor:pointer">Clear range</button>
-        </div>
-        <canvas id="trendChart"></canvas>
     </div>
     <style>
         /* selection rectangle overlay inside chart container */
@@ -191,6 +194,7 @@ async function initDashboard() {
             const pctEl = document.getElementById('dome-percent');
             const litresEl = document.getElementById('dome-litres');
             const pathEl = document.getElementById('waterSurfacePathIndex');
+            const headlineEl = document.getElementById('dome-headline');
             if (!textBlock) return;
 
             const pct = Math.max(0, Math.min(100, (leakML / DOME_CAPACITY_ML) * 100));
@@ -201,6 +205,9 @@ async function initDashboard() {
             if (mlEl) mlEl.innerText = leakML.toFixed(1) + ' MLD';
             if (pctEl) pctEl.innerText = pctRounded.toString();
             if (litresEl) litresEl.innerText = liters + ' L';
+
+            // update headline (centered and alone)
+            if (headlineEl) headlineEl.innerText = `${leakML.toFixed(1)} MLD`;
 
             // draw water surface path using same curve calibration as saddledome.html
             if (pathEl) {
