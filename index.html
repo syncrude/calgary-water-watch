@@ -31,7 +31,7 @@
     <div id="error-banner" class="error-msg">⚠️ Failed to load daily data. Falling back to historical estimates.</div>
     
     <h1>Calgary Water: The Transparency Project</h1>
-    <p class="subtitle">Visualizing the <b>22% baseline leak rate</b> against daily system production.</p>
+    <p class="subtitle">Last reported by the City of Calgary: <b>22% (2024)</b>; we estimate closer to <b>25% (2026)</b>.</p>
     <div id="data-date" style="color:#555; margin-bottom:10px;">Data date: —</div>
     <div style="margin-bottom:12px; display:flex; gap:12px; align-items:center;">
         <a href="data-sources.html">Data Sources & Methods →</a>
@@ -43,20 +43,9 @@
     </div>
     <div id="saddledome-block" style="margin-top:12px; text-align:center;">
         <h2 id="dome-headline" style="margin:0; font-size:1.6rem; font-weight:700;">—</h2>
-    </div>
 
-    <div class="chart-container">
-        <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
-            <div id="selected-line" style="color:#333; font-weight:600">Selected: —</div>
-            <button id="clear-range-btn" style="margin-left:auto; padding:6px 10px; border-radius:6px; border:1px solid #ccc; background:#fff; cursor:pointer">Clear range</button>
-        </div>
-        <canvas id="trendChart"></canvas>
-    </div>
-    
-    <!-- visual block moved below trend chart -->
-    <div id="saddledome-visual-block" style="margin-top:12px; padding:12px; border-radius:8px; background:#fff4f6; border:1px solid #f5dbe0;">
-        <div style="display:flex; gap:16px; align-items:center;">
-            <div style="flex:1; max-width:420px;">
+        <div id="saddledome-visual" style="margin-top:12px; padding:12px; border-radius:8px; background:#fff4f6; border:1px solid #f5dbe0; max-width:960px; margin-left:auto; margin-right:auto;">
+            <div style="display:block;">
                 <svg id="saddledome-svg" class="svg-visualizer" viewBox="0 0 900 450" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;">
                     <defs>
                         <linearGradient id="waterGradIndex" x1="0" x2="0" y1="0" y2="1">
@@ -73,14 +62,25 @@
                     <path id="waterSurfacePathIndex" d="M 0,0 V 0 H 900 V 450 H 0 Z" fill="#ffffff" mask="url(#domeMaskIndex)" />
                 </svg>
             </div>
-            <div style="flex:1; min-width:220px; text-align:left;">
-                <div style="font-size:0.95rem; color:#334">City leak volume (MLD): <b id="dome-ml">—</b></div>
-                <div style="margin-top:8px; font-size:0.95rem; color:#334">Equivalent of dome capacity (330 ML): <b id="dome-percent">—</b>%</div>
-                <div style="margin-top:8px; font-size:0.95rem; color:#334">Litres: <b id="dome-litres">—</b></div>
-                <div id="saddledome-text" style="margin-top:10px; color:#234; font-weight:600">—</div>
-            </div>
+        </div>
+
+        <div style="margin-top:12px; color:#234; font-weight:600; max-width:960px; margin-left:auto; margin-right:auto; text-align:left;">
+            <div style="font-size:0.95rem; color:#334">City leak volume (MLD): <b id="dome-ml">—</b></div>
+            <div style="margin-top:8px; font-size:0.95rem; color:#334">Equivalent of dome capacity (330 ML): <b id="dome-percent">—</b>%</div>
+            <div style="margin-top:8px; font-size:0.95rem; color:#334">Litres: <b id="dome-litres">—</b></div>
+            <div id="saddledome-text" style="margin-top:10px; color:#234; font-weight:600">—</div>
         </div>
     </div>
+
+    <div class="chart-container">
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
+            <div id="selected-line" style="color:#333; font-weight:600">Selected: —</div>
+            <button id="clear-range-btn" style="margin-left:auto; padding:6px 10px; border-radius:6px; border:1px solid #ccc; background:#fff; cursor:pointer">Clear range</button>
+        </div>
+        <canvas id="trendChart"></canvas>
+    </div>
+    
+    <!-- previous visual block removed; consolidated under saddledome-block -->
     <style>
         /* selection rectangle overlay inside chart container */
         .chart-container { position: relative; }
@@ -106,10 +106,7 @@
         </div>
     </div>
 
-    <div id="saddledome-block" style="margin-top:18px; padding:16px; border-radius:8px; background:#f7fbff; border:1px solid #e6f0fb;">
-        <strong>Saddledome Equivalent</strong>
-        <div id="saddledome-text" style="margin-top:8px; color:#234;">—</div>
-    </div>
+    <!-- consolidated Saddledome block above (title, graphic, description) -->
 
     <div class="logic-box">
         <h3>Adjusted Daily Volume Logic</h3>
