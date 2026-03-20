@@ -39,9 +39,17 @@
     </div>
 
     <div class="chart-container">
-        <div id="selected-line" style="color:#333; margin-bottom:8px; font-weight:600">Selected: —</div>
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
+            <div id="selected-line" style="color:#333; font-weight:600">Selected: —</div>
+            <button id="clear-range-btn" style="margin-left:auto; padding:6px 10px; border-radius:6px; border:1px solid #ccc; background:#fff; cursor:pointer">Clear range</button>
+        </div>
         <canvas id="trendChart"></canvas>
     </div>
+    <style>
+        /* selection rectangle overlay inside chart container */
+        .chart-container { position: relative; }
+        .selection-rect { position: absolute; top: 0; left: 0; height: 100%; pointer-events: none; border: 2px dashed rgba(0,0,0,0.2); background: rgba(0,123,255,0.08); display: none; }
+    </style>
 
     <div class="summary">
         <div class="stat-card leaks">
@@ -95,11 +103,12 @@ async function initDashboard() {
         const latest = arc.features[0].attributes;
         const total = parseFloat(latest.TOTAL_CALGARY_ML); // in Million Litres per Day (MLD)
         // Show the metric date from the CEAS feed
+        let latestDateStr = 'unknown';
         try {
             const metricDate = latest.METRIC_DATE; // format like YYYY/MM/DD
-            const displayDate = metricDate ? metricDate.split('/').join('-') : 'unknown';
+            latestDateStr = metricDate ? metricDate.split('/').join('-') : 'unknown';
             const dateEl = document.getElementById('data-date');
-            if (dateEl) dateEl.innerText = `Data date: ${displayDate}`;
+            if (dateEl) dateEl.innerText = `Data date: ${latestDateStr}`;
         } catch (e) {
             console.warn('Could not parse metric date', e);
         }
@@ -114,11 +123,19 @@ async function initDashboard() {
         const iciPercent = 0.31;
         const regPercent = 0.08;
 
+        const statsNum = {
+            leaks: total * leakPercent,
+            citizens: total * usagePercent * resPercent,
+            industry: total * usagePercent * iciPercent,
+            regional: total * usagePercent * regPercent
+        };
+        // keep a copy of latest numeric stats for reset
+        const latestStatsNum = Object.assign({}, statsNum);
         const stats = {
-            leaks: (total * leakPercent).toFixed(1),
-            citizens: (total * usagePercent * resPercent).toFixed(1),
-            industry: (total * usagePercent * iciPercent).toFixed(1),
-            regional: (total * usagePercent * regPercent).toFixed(1)
+            leaks: statsNum.leaks.toFixed(1),
+            citizens: statsNum.citizens.toFixed(1),
+            industry: statsNum.industry.toFixed(1),
+            regional: statsNum.regional.toFixed(1)
         };
 
         // Update Dynamic UI text based on the day in reference
@@ -127,14 +144,14 @@ async function initDashboard() {
         document.getElementById('val-industry').innerText = stats.industry + " MLD";
         document.getElementById('val-regional').innerText = stats.regional + " MLD";
 
-        // Render Graph
-        new Chart(document.getElementById('waterChart'), {
+        // Render Graph (summary bar chart)
+        const summaryChart = new Chart(document.getElementById('waterChart'), {
             type: 'bar',
             data: {
                 labels: ['Infrastructure Leaks', 'Citizen Usage', 'Industry/Business', 'Regional (Airdrie/etc)'],
                 datasets: [{
                     label: `Millions of Litres per Day (Total: ${total} MLD)`,
-                    data: [stats.leaks, stats.citizens, stats.industry, stats.regional],
+                    data: [Number(statsNum.leaks.toFixed(1)), Number(statsNum.citizens.toFixed(1)), Number(statsNum.industry.toFixed(1)), Number(statsNum.regional.toFixed(1))],
                     backgroundColor: ['#e74c3c', '#3498db', '#f39c12', '#9b59b6'],
                     borderWidth: 1
                 }]
@@ -223,6 +240,12 @@ async function initDashboard() {
                             if (dateEl) dateEl.innerText = `Data date: ${labels[idx]}`;
                             // visually select the dataset (line)
                             selectDataset(ds);
+                            // update summary chart to reflect this single-date selection
+                            if (typeof summaryChart !== 'undefined') {
+                                summaryChart.data.datasets[0].data = [leaksArr[idx], citizensArr[idx], industryArr[idx], regionalArr[idx]];
+                                summaryChart.data.datasets[0].label = `Millions of Litres per Day (Date: ${labels[idx]})`;
+                                summaryChart.update();
+                            }
                         }
                     }
                 }
@@ -238,6 +261,111 @@ async function initDashboard() {
                 trendChart.update();
                 if (selectedEl) selectedEl.innerText = `Selected: ${trendChart.data.datasets[dsIndex].label}`;
             }
+
+            // --- Range selection: drag to select an x-range on the trend chart ---
+            (function attachRangeSelector() {
+                const container = ctx.parentElement; // .chart-container
+                if (!container) return;
+                const rectEl = document.createElement('div');
+                rectEl.className = 'selection-rect';
+                container.appendChild(rectEl);
+
+                let dragging = false;
+                let startX = 0;
+                let endX = 0;
+
+                function showRect(x1, x2) {
+                    const left = Math.min(x1, x2);
+                    const width = Math.abs(x2 - x1);
+                    rectEl.style.display = width > 2 ? 'block' : 'none';
+                    rectEl.style.left = `${left}px`;
+                    rectEl.style.width = `${width}px`;
+                }
+
+                function clearRect() {
+                    rectEl.style.display = 'none';
+                }
+
+                function pixelToIndex(px) {
+                    const chartRect = ctx.getBoundingClientRect();
+                    const canvasX = px - chartRect.left;
+                    const xScale = trendChart.scales['x'];
+                    if (!xScale) return null;
+                    const val = xScale.getValueForPixel(canvasX);
+                    const idx = Math.round(val);
+                    return Math.max(0, Math.min(labels.length - 1, idx));
+                }
+
+                container.addEventListener('pointerdown', (ev) => {
+                    if (ev.button !== 0) return;
+                    const b = ctx.getBoundingClientRect();
+                    if (ev.clientX < b.left || ev.clientX > b.right) return;
+                    dragging = true;
+                    startX = ev.clientX - b.left;
+                    endX = startX;
+                    showRect(startX, endX);
+                });
+
+                window.addEventListener('pointermove', (ev) => {
+                    if (!dragging) return;
+                    const b = ctx.getBoundingClientRect();
+                    endX = Math.max(0, Math.min(b.width, ev.clientX - b.left));
+                    showRect(startX, endX);
+                });
+
+                window.addEventListener('pointerup', (ev) => {
+                    if (!dragging) return;
+                    dragging = false;
+                    const b = ctx.getBoundingClientRect();
+                    endX = Math.max(0, Math.min(b.width, ev.clientX - b.left));
+                    showRect(startX, endX);
+                    const idx1 = pixelToIndex(startX + ctx.getBoundingClientRect().left);
+                    const idx2 = pixelToIndex(endX + ctx.getBoundingClientRect().left);
+                    if (idx1 === null || idx2 === null) { clearRect(); return; }
+                    const a = Math.min(idx1, idx2);
+                    const bIdx = Math.max(idx1, idx2);
+                    const slice = (arr) => arr.slice(a, bIdx + 1);
+                    const sum = arr => (arr.length ? (arr.reduce((s,v)=>s+v,0)).toFixed(1) : '—');
+                    const sumLeaks = sum(slice(leaksArr));
+                    const sumCit = sum(slice(citizensArr));
+                    const sumInd = sum(slice(industryArr));
+                    const sumReg = sum(slice(regionalArr));
+                    document.getElementById('val-leaks').innerText = sumLeaks + ' MLD';
+                    document.getElementById('val-citizens').innerText = sumCit + ' MLD';
+                    document.getElementById('val-industry').innerText = sumInd + ' MLD';
+                    document.getElementById('val-regional').innerText = sumReg + ' MLD';
+                    if (selectedEl) selectedEl.innerText = `Selected: ${labels[a]} → ${labels[bIdx]}`;
+                    // update top summary chart to show the summed range
+                    if (typeof summaryChart !== 'undefined') {
+                        summaryChart.data.datasets[0].data = [Number(sumLeaks), Number(sumCit), Number(sumInd), Number(sumReg)];
+                        summaryChart.data.datasets[0].label = `Total (sum) MLD over ${labels[a]} → ${labels[bIdx]}`;
+                        summaryChart.update();
+                    }
+                    setTimeout(clearRect, 1200);
+                });
+            })();
+                    // wire up clear range button to reset to latest values
+                    try {
+                        const clearBtn = document.getElementById('clear-range-btn');
+                        if (clearBtn) {
+                            clearBtn.addEventListener('click', () => {
+                                // restore stat cards
+                                document.getElementById('val-leaks').innerText = Number(latestStatsNum.leaks.toFixed(1)) + ' MLD';
+                                document.getElementById('val-citizens').innerText = Number(latestStatsNum.citizens.toFixed(1)) + ' MLD';
+                                document.getElementById('val-industry').innerText = Number(latestStatsNum.industry.toFixed(1)) + ' MLD';
+                                document.getElementById('val-regional').innerText = Number(latestStatsNum.regional.toFixed(1)) + ' MLD';
+                                // update summaryChart
+                                if (typeof summaryChart !== 'undefined') {
+                                    summaryChart.data.datasets[0].data = [Number(latestStatsNum.leaks.toFixed(1)), Number(latestStatsNum.citizens.toFixed(1)), Number(latestStatsNum.industry.toFixed(1)), Number(latestStatsNum.regional.toFixed(1))];
+                                    summaryChart.data.datasets[0].label = `Millions of Litres per Day (Latest: ${latestDateStr})`;
+                                    summaryChart.update();
+                                }
+                                // update selected/date labels
+                                const dateEl = document.getElementById('data-date'); if (dateEl) dateEl.innerText = `Data date: ${latestDateStr}`;
+                                if (selectedEl) selectedEl.innerText = `Selected: Latest (${latestDateStr})`;
+                            });
+                        }
+                    } catch (e) { console.warn('Could not bind clear button', e); }
         } catch (e) {
             console.warn('Time series chart not rendered:', e);
         }
