@@ -215,7 +215,7 @@ async function initDashboard() {
             // compute daily cost: leakML (ML) * 1000 (m3 per ML) * ratePerM3
             const costDaily = leakML * 1000 * RATE_PER_M3;
             const costEl = document.getElementById('dome-cost');
-            if (costEl) costEl.innerText = '$' + costDaily.toFixed(2);
+            if (costEl) costEl.innerText = '$' + costDaily.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
 
             // update numeric fields
             if (mlEl) mlEl.innerText = leakML.toFixed(1) + ' MLD';
