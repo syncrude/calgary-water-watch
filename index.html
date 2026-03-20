@@ -4,90 +4,89 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Calgary Water Transparency Dashboard</title>
+    <link rel="stylesheet" href="theme.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; color: #333; margin: 0; padding: 20px; }
-        .container { max-width: 900px; margin: auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-        h1 { color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 10px; }
-        .subtitle { color: #7f8c8d; margin-bottom: 25px; font-size: 1.1rem; }
-        
-        .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 25px 0; }
-        .stat-card { padding: 20px; border-radius: 10px; text-align: center; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .leaks { background: #e74c3c; } /* Red for waste */
-        .citizens { background: #3498db; } /* Blue for residents */
-        .industry { background: #f39c12; } /* Orange for industry/business */
-        .regional { background: #9b59b6; } /* Purple for neighbors */
-        
-        .chart-container { position: relative; height: 400px; margin-bottom: 40px; border: 1px solid #eee; padding: 15px; border-radius: 8px; }
-        .logic-box { background: #fff8e1; border-left: 5px solid #ffc107; padding: 20px; margin: 20px 0; border-radius: 0 8px 8px 0; }
-        /* Saddledome responsive layout */
-        .saddledome-row { display:flex; gap:20px; align-items:center; }
-        @media (max-width: 800px) {
-            .saddledome-row { flex-direction: column; }
-            .saddledome-stats { flex: none; }
-        }
-        
-        footer { font-size: 0.8rem; color: #888; text-align: center; margin-top: 50px; line-height: 1.5; }
-        .error-msg { background: #fee; color: #c00; padding: 10px; border-radius: 5px; margin-bottom: 20px; display: none; }
+        .chart-area { position: relative; height: 400px; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div id="error-banner" class="error-msg">⚠️ Failed to load daily data. Falling back to historical estimates.</div>
-    
-    <h1>Calgary Water: The Transparency Project</h1>
-    <p class="subtitle">Last reported by the City of Calgary: <b>22% (2024)</b>; we estimate closer to <b>25% (2026)</b>.</p>
-    <div id="data-date" style="color:#555; margin-bottom:10px;">Data date: —</div>
-    <div style="margin-bottom:12px; display:flex; gap:12px; align-items:center;">
-        <a href="data-sources.html">Data Sources & Methods →</a>
-        <a href="calgary-cost-breakdown.html">Calgary Cost Breakdown →</a>
+<!-- Shared Navigation -->
+<nav class="site-nav">
+    <a href="index.html" class="nav-brand">Calgary Water Watch</a>
+    <a href="index.html" class="active">Dashboard</a>
+    <a href="calgary-cost-breakdown.html">Cost Breakdown</a>
+    <a href="data-sources.html">Data &amp; Methods</a>
+    <span class="nav-live"><span class="pulse-dot"></span> Live data</span>
+</nav>
+
+<div class="page-container">
+
+    <div id="error-banner" class="error-banner">Failed to load daily data. Falling back to historical estimates.</div>
+
+    <!-- Hero Header -->
+    <div class="page-hero animate-in">
+        <h1>Calgary Water: The Transparency Project</h1>
+        <p class="hero-subtitle">Last reported by the City of Calgary: <b>22% (2024)</b> — we estimate closer to <b>25% (2026)</b>.</p>
+        <div class="hero-meta">
+            <span class="hero-badge" id="data-date">Data date: —</span>
+            <span class="hero-badge">Source: CEAS Daily Feed</span>
+        </div>
     </div>
 
-    <div class="chart-container">
-        <canvas id="waterChart"></canvas>
+    <!-- Summary Stat Cards -->
+    <div class="stat-grid animate-in">
+        <div class="stat-card-themed danger">
+            <span class="stat-icon">🚰</span>
+            <span class="stat-label">Lost to Leaks</span>
+            <div class="stat-value" id="val-leaks">-- MLD</div>
+        </div>
+        <div class="stat-card-themed info">
+            <span class="stat-icon">🏠</span>
+            <span class="stat-label">Citizen Usage</span>
+            <div class="stat-value" id="val-citizens">-- MLD</div>
+        </div>
+        <div class="stat-card-themed warning">
+            <span class="stat-icon">🏭</span>
+            <span class="stat-label">Industry (ICI)</span>
+            <div class="stat-value" id="val-industry">-- MLD</div>
+        </div>
+        <div class="stat-card-themed purple">
+            <span class="stat-icon">🤝</span>
+            <span class="stat-label">Regional Partners</span>
+            <div class="stat-value" id="val-regional">-- MLD</div>
+        </div>
     </div>
 
-    <div class="chart-container">
+    <!-- Bar Chart Card -->
+    <div class="chart-card animate-in">
+        <div class="chart-title">Daily Volume Breakdown</div>
+        <div class="chart-area">
+            <canvas id="waterChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Trend Chart Card -->
+    <div class="chart-card animate-in">
         <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
-            <div id="selected-line" style="color:#333; font-weight:600">Selected: —</div>
-            <button id="clear-range-btn" style="margin-left:auto; padding:6px 10px; border-radius:6px; border:1px solid #ccc; background:#fff; cursor:pointer">Clear range</button>
+            <div class="chart-title" style="margin:0">3-Year Daily Trend</div>
+            <div id="selected-line" style="color:var(--color-text-muted); font-weight:600; font-size:0.85rem; margin-left:8px;">Selected: —</div>
+            <button id="clear-range-btn" class="btn btn-outline" style="margin-left:auto; padding:5px 12px; font-size:0.82rem;">Clear range</button>
         </div>
-        <canvas id="trendChart"></canvas>
-    </div>
-    
-    <!-- previous visual block removed; consolidated under saddledome-block -->
-    <style>
-        /* selection rectangle overlay inside chart container */
-        .chart-container { position: relative; }
-        .selection-rect { position: absolute; top: 0; left: 0; height: 100%; pointer-events: none; border: 2px dashed rgba(0,0,0,0.2); background: rgba(0,123,255,0.08); display: none; }
-    </style>
-
-    <div class="summary">
-        <div class="stat-card leaks">
-            <strong>Lost to Leaks</strong>
-            <div id="val-leaks">-- MLD</div>
-        </div>
-        <div class="stat-card citizens">
-            <strong>Citizen Usage</strong>
-            <div id="val-citizens">-- MLD</div>
-        </div>
-        <div class="stat-card industry">
-            <strong>Industry (ICI)</strong>
-            <div id="val-industry">-- MLD</div>
-        </div>
-        <div class="stat-card regional">
-            <strong>Regional Partners</strong>
-            <div id="val-regional">-- MLD</div>
+        <div class="chart-area">
+            <canvas id="trendChart"></canvas>
         </div>
     </div>
 
-    <div id="saddledome-block" style="margin-top:12px; text-align:center;">
-        <h2 id="dome-headline" style="margin:0; font-size:1.6rem; font-weight:700;">—</h2>
+    <!-- Saddledome Visualizer -->
+    <div class="card animate-in" id="saddledome-block" style="text-align:center;">
+        <div class="chart-title">Dome of Waste Water</div>
+        <h2 id="dome-headline" style="margin:4px 0 12px; font-size:1.6rem; font-weight:800; color:var(--color-danger); border:none; padding:0;">—</h2>
 
-            <div class="saddledome-inner" style="max-width:960px; margin:12px auto 0;">
-            <div class="saddledome-row" style="display:flex; gap:20px;">
-                <div class="saddledome-visual" style="flex:1; min-width:280px; padding:12px; border-radius:8px; background:#fff4f6; border:1px solid #f5dbe0;">
+        <div style="max-width:960px; margin:0 auto;">
+            <div class="saddledome-row">
+                <div class="saddledome-visual">
                     <svg id="saddledome-svg" class="svg-visualizer" viewBox="0 0 900 450" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;">
                         <defs>
                             <linearGradient id="waterGradIndex" x1="0" x2="0" y1="0" y2="1">
@@ -105,24 +104,72 @@
                     </svg>
                 </div>
 
-                <div class="saddledome-stats" style="flex:0 0 360px; text-align:left; color:#234; font-weight:600;">
-                    <div style="font-size:0.95rem; color:#334">City leak volume (MLD): <b id="dome-ml">—</b></div>
-                    <div style="margin-top:8px; font-size:0.95rem; color:#334">Equivalent of dome capacity (330 ML): <b id="dome-percent">—</b></div>
-                    <div style="margin-top:8px; font-size:0.95rem; color:#334">Litres: <b id="dome-litres">—</b></div>
-                    <div style="margin-top:8px; font-size:0.95rem; color:#334">Estimated daily cost (@ $1.7409 / m³): <b id="dome-cost">—</b></div>
-                    <div id="saddledome-text" style="margin-top:10px; color:#234; font-weight:600">—</div>
+                <div class="saddledome-stats">
+                    <div class="dome-stat-row"><span class="dome-stat-label">City leak volume</span> <b id="dome-ml">—</b></div>
+                    <div class="dome-stat-row"><span class="dome-stat-label">Dome capacity (330 ML)</span> <b id="dome-percent">—</b></div>
+                    <div class="dome-stat-row"><span class="dome-stat-label">Litres</span> <b id="dome-litres">—</b></div>
+                    <div class="dome-stat-row"><span class="dome-stat-label">Est. daily cost @ $1.7409/m³</span> <b id="dome-cost" style="color:var(--color-danger);">—</b></div>
+                    <div id="saddledome-text" style="margin-top:12px; font-size:0.88rem; color:var(--color-text-muted); font-weight:600;">—</div>
                 </div>
             </div>
         </div>
     </div>
-    <!-- consolidated Saddledome block above (title, graphic, description) -->
 
-    <div class="logic-box">
+    <!-- Logic Box -->
+    <div class="info-box animate-in">
         <h3>Adjusted Daily Volume Logic</h3>
         <p>The volumes above are calculated by applying distribution ratios to the <b>Total Day Demand</b> for the current record. According to City data, 22% of total demand is lost to infrastructure leaks. The remaining usage is shared between Residential (60%), ICI (31%), and Regional partners (8%).</p>
     </div>
 
-    <footer>
+    <hr class="section-divider">
+
+    <!-- Roadmap: Future Information Guides -->
+    <div class="card animate-in">
+        <h2 style="border:none; padding:0; margin:0 0 4px;">Coming Soon</h2>
+        <p style="color:var(--color-text-muted); font-size:0.92rem; margin:0 0 16px;">We're expanding this dashboard. Here's what's planned:</p>
+
+        <div class="roadmap-grid">
+            <div class="roadmap-card">
+                <span class="roadmap-badge planned">Planned</span>
+                <span class="roadmap-icon">📊</span>
+                <h4>Per-Capita Consumption</h4>
+                <p>Daily litres per person benchmarked against comparable Canadian cities.</p>
+            </div>
+            <div class="roadmap-card">
+                <span class="roadmap-badge planned">Planned</span>
+                <span class="roadmap-icon">🗺️</span>
+                <h4>Neighbourhood Leak Map</h4>
+                <p>Interactive map of reported water main breaks and repair timelines by community.</p>
+            </div>
+            <div class="roadmap-card">
+                <span class="roadmap-badge researching">Researching</span>
+                <span class="roadmap-icon">💧</span>
+                <h4>Reservoir Levels</h4>
+                <p>Real-time reservoir storage data from Glenmore and Bearspaw treatment plants.</p>
+            </div>
+            <div class="roadmap-card">
+                <span class="roadmap-badge in-progress">In Progress</span>
+                <span class="roadmap-icon">💰</span>
+                <h4>Rate Projections (2027+)</h4>
+                <p>Projected residential and commercial rate increases based on capital budget forecasts.</p>
+            </div>
+            <div class="roadmap-card">
+                <span class="roadmap-badge researching">Researching</span>
+                <span class="roadmap-icon">🌡️</span>
+                <h4>Seasonal Demand Patterns</h4>
+                <p>Summer/winter demand analysis showing irrigation impact and conservation opportunities.</p>
+            </div>
+            <div class="roadmap-card">
+                <span class="roadmap-badge planned">Planned</span>
+                <span class="roadmap-icon">🔔</span>
+                <h4>Alerts &amp; Notifications</h4>
+                <p>Subscribe to water advisories, boil-water alerts, and infrastructure updates for your area.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="site-footer">
         <b>Data Methodology:</b><br>
         Baseline Leaks: 22% of Total Day Demand.<br>
         Sector Distribution (of usage): 60% Residential, 31% Industrial/Commercial, 8% Regional.<br>

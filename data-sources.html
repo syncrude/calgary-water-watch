@@ -1,102 +1,169 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Calgary Water Watch — Data Sources & Methods</title>
-  <style>
-    body{font-family:Inter,Segoe UI,Arial,sans-serif;line-height:1.45;color:#1f2937;background:#f7fafc;padding:28px}
-    .page{max-width:900px;margin:0 auto;background:#fff;border-radius:10px;padding:28px;box-shadow:0 8px 20px rgba(2,6,23,0.06)}
-    h1{margin:0 0 8px;font-size:1.6rem}
-    h2{font-size:1.05rem;margin-top:20px}
-    p,li{color:#374151}
-    code{background:#f1f5f9;padding:2px 6px;border-radius:4px}
-    pre{background:#0f172a;color:#e6eef8;padding:12px;border-radius:6px;overflow:auto}
-    ul{margin:8px 0 8px 18px}
-    .muted{color:#6b7280;font-size:0.95rem}
-  </style>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Calgary Water Watch &#8212; Data Sources &amp; Methods</title>
+    <link rel="stylesheet" href="theme.css">
 </head>
 <body>
-  <main class="page">
-    <h1>Data Sources & Methods</h1>
-    <p style="margin-top:8px;"><a href="index.html">← Back to Dashboard</a></p>
-    <p class="muted">This page documents where the dashboard gets its data, how it's queried, and how displayed metrics are calculated.</p>
 
-    <h2>Primary live data source</h2>
-    <p>
-      The dashboard uses the City of Calgary CEAS daily feed hosted as an ArcGIS FeatureService. We query table <strong>15</strong> (CEAS_EXT_WATERDEMAND_DAILY) for fields of interest:
-    </p>
-    <ul>
-      <li><strong>METRIC_DATE</strong> — measurement date</li>
-      <li><strong>TOTAL_CALGARY_ML</strong> — total daily system production (Million Litres per Day, MLD)</li>
-    </ul>
-    <p>Sample REST query used to fetch the latest record (returns JSON):</p>
-    <pre>https://services1.arcgis.com/.../FeatureServer/15/query?where=TOTAL_CALGARY_ML%20IS%20NOT%20NULL&amp;outFields=METRIC_DATE,TOTAL_CALGARY_ML&amp;orderByFields=METRIC_DATE%20DESC&amp;resultRecordCount=1&amp;f=json</pre>
+<!-- Shared Navigation -->
+<nav class="site-nav">
+    <a href="index.html" class="nav-brand">Calgary Water Watch</a>
+    <a href="index.html">Dashboard</a>
+    <a href="calgary-cost-breakdown.html">Cost Breakdown</a>
+    <a href="data-sources.html" class="active">Data &amp; Methods</a>
+    <span class="nav-live"><span class="pulse-dot"></span> Live data</span>
+</nav>
 
-    <h2>Historical time series (3 years)</h2>
-    <p>
-      For the trend chart we request all daily rows since today minus 3 years. The ArcGIS endpoint paginates results; the code pages with <code>resultOffset</code> + <code>resultRecordCount</code> (batch size = 1000) and concatenates <code>features[].attributes</code>.
-    </p>
+<!-- Hero -->
+<section class="page-hero" style="padding:48px 20px 36px;">
+    <h1>Data Sources &amp; Methods</h1>
+    <p>Where the dashboard gets its data, how it is queried, and how metrics are calculated.</p>
+</section>
 
-    <h2>Fallback data</h2>
-    <p>
-      If the live ArcGIS fetch fails (network, CORS, or the service is unavailable), the dashboard will try a repo-local snapshot file (<code>ceas_daily_fallback.json</code>), if present and sufficiently large. If that's missing or too small, the UI synthesizes a deterministic 3‑year daily series client-side so the charts remain usable for demos and offline testing.
-    </p>
+<div class="page-container">
 
-    <h2>Calculations & sector splits</h2>
-    <p>The dashboard computes derived statistics from <code>TOTAL_CALGARY_ML</code> as follows:</p>
-    <ul>
-      <li><strong>Leaks:</strong> 22% of <code>TOTAL_CALGARY_ML</code> (baseline infrastructure loss)</li>
-      <li><strong>Usage (remaining 78%)</strong> split into:
+    <!-- Primary Data Source -->
+    <div class="card animate-in">
+        <h2 style="margin-top:0;">Primary Live Data Source</h2>
+        <p>The dashboard uses the City of Calgary CEAS daily feed hosted as an ArcGIS FeatureService. We query table <strong>15</strong> (CEAS_EXT_WATERDEMAND_DAILY) for fields of interest:</p>
         <ul>
-          <li>Citizens (residential): 60% of the usage</li>
-          <li>Industry (ICI): 31% of the usage</li>
-          <li>Regional partners: 8% of the usage</li>
+            <li><strong>METRIC_DATE</strong> &mdash; measurement date</li>
+            <li><strong>TOTAL_CALGARY_ML</strong> &mdash; total daily system production (Million Litres per Day, MLD)</li>
         </ul>
-      </li>
-    </ul>
-    <p>Example (pseudocode):</p>
-    <pre>leaks = total * 0.22
-usage = total * 0.78
-citizens = usage * 0.60
-industry = usage * 0.31
-regional = usage * 0.08</pre>
+        <p>Sample REST query (returns JSON):</p>
+        <pre>https://services1.arcgis.com/.../FeatureServer/15/query?
+  where=TOTAL_CALGARY_ML IS NOT NULL
+  &amp;outFields=METRIC_DATE,TOTAL_CALGARY_ML
+  &amp;orderByFields=METRIC_DATE DESC
+  &amp;resultRecordCount=1
+  &amp;f=json</pre>
+    </div>
 
-    <h2>Dome of Waste Water (visual)</h2>
-    <p>
-      The "Dome of Waste Water" uses a Saddledome capacity of <strong>330 ML</strong>. The page calculates:
-    </p>
-    <ul>
-      <li>Number of domes = leaks / 330</li>
-      <li>Percent of a dome = (leaks / 330) * 100</li>
-      <li>Litres = leaks * 1,000,000</li>
-    </ul>
+    <!-- Historical -->
+    <div class="card animate-in">
+        <h2 style="margin-top:0;">Historical Time Series (3 Years)</h2>
+        <p>For the trend chart we request all daily rows since today minus 3 years. The ArcGIS endpoint paginates results; the code pages with <code>resultOffset</code> + <code>resultRecordCount</code> (batch size = 1000) and concatenates <code>features[].attributes</code>.</p>
+    </div>
 
-    <h2>Notes on data quality and provenance</h2>
-    <ul>
-      <li>The original Socrata dataset referenced earlier (vax6-p8ay) was missing (404). That is why we use the ArcGIS CEAS feed as the authoritative source.</li>
-      <li>Metric date strings are passed through as provided by the service (often <code>YYYY/MM/DD</code>); the UI normalizes display to <code>YYYY-MM-DD</code>.</li>
-      <li>All derived numbers are shown with one decimal point and are approximate for readability.</li>
-    </ul>
+    <!-- Fallback -->
+    <div class="card animate-in">
+        <h2 style="margin-top:0;">Fallback Data</h2>
+        <p>If the live ArcGIS fetch fails (network, CORS, or the service is unavailable), the dashboard will try a repo-local snapshot file (<code>ceas_daily_fallback.json</code>), if present and sufficiently large. If that is missing or too small, the UI synthesizes a deterministic 3-year daily series client-side so the charts remain usable for demos and offline testing.</p>
+    </div>
 
-    <h2>How to run and test locally</h2>
-    <ol>
-      <li>Start a local HTTP server in the repo root (the site requires serving over HTTP to fetch local files):
-        <pre>python3 -m http.server 8000
+    <!-- Calculations -->
+    <div class="card animate-in">
+        <h2 style="margin-top:0;">Calculations &amp; Sector Splits</h2>
+        <p>The dashboard computes derived statistics from <code>TOTAL_CALGARY_ML</code> as follows:</p>
+        <ul>
+            <li><strong>Leaks:</strong> 22% of <code>TOTAL_CALGARY_ML</code> (baseline infrastructure loss)</li>
+            <li><strong>Usage (remaining 78%)</strong> split into:
+                <ul>
+                    <li>Citizens (residential): 60% of usage</li>
+                    <li>Industry (ICI): 31% of usage</li>
+                    <li>Regional partners: 8% of usage</li>
+                </ul>
+            </li>
+        </ul>
+        <div class="formula-box">leaks    = total x 0.22
+usage    = total x 0.78
+citizens = usage x 0.60
+industry = usage x 0.31
+regional = usage x 0.08</div>
+    </div>
+
+    <!-- Dome of Waste Water -->
+    <div class="card animate-in">
+        <h2 style="margin-top:0;">Dome of Waste Water (Visual)</h2>
+        <p>The Dome of Waste Water uses a Saddledome capacity of <strong>330 ML</strong>. The page calculates:</p>
+        <div class="stat-grid">
+            <div class="stat-card-themed danger">
+                <span class="stat-label">Number of domes</span>
+                <div class="stat-value" style="font-size:1.3rem;">leaks / 330</div>
+            </div>
+            <div class="stat-card-themed warning">
+                <span class="stat-label">Percent of a dome</span>
+                <div class="stat-value" style="font-size:1.3rem;">(leaks / 330) x 100</div>
+            </div>
+            <div class="stat-card-themed info">
+                <span class="stat-label">Litres wasted</span>
+                <div class="stat-value" style="font-size:1.3rem;">leaks x 1,000,000</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Quality -->
+    <div class="card animate-in">
+        <h2 style="margin-top:0;">Notes on Data Quality &amp; Provenance</h2>
+        <div class="info-box">
+            <ul style="margin:0; padding-left:20px;">
+                <li>The original Socrata dataset (vax6-p8ay) was missing (404). That is why we use the ArcGIS CEAS feed as the authoritative source.</li>
+                <li>Metric date strings are passed as provided by the service (often <code>YYYY/MM/DD</code>); the UI normalizes display to <code>YYYY-MM-DD</code>.</li>
+                <li>All derived numbers are shown with one decimal point and are approximate for readability.</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Run Locally -->
+    <div class="card animate-in">
+        <h2 style="margin-top:0;">How to Run &amp; Test Locally</h2>
+        <ol>
+            <li>Start a local HTTP server in the repo root:
+                <pre>python3 -m http.server 8000
 # or
 npx http-server -p 8000</pre>
-      </li>
-      <li>Open <code>http://localhost:8000/index.html</code> and click "Refresh live data" (or disable network to force fallback).</li>
-      <li>To inspect the raw ArcGIS responses, use <code>curl</code> or your browser network tools with the sample URL above.</li>
-    </ol>
+            </li>
+            <li>Open <code>http://localhost:8000/index.html</code> and click Refresh live data (or disable network to force fallback).</li>
+            <li>To inspect the raw ArcGIS responses, use <code>curl</code> or your browser network tools with the sample URL above.</li>
+        </ol>
+    </div>
 
-    <h2>References</h2>
-    <ul>
-      <li>ArcGIS REST API — FeatureService: https://developers.arcgis.com/rest/</li>
-      <li>City of Calgary CEAS services (FeatureServer links embedded in the project)</li>
-    </ul>
+    <!-- References -->
+    <div class="card animate-in" style="background:var(--color-bg);">
+        <h3 style="margin-top:0;">References</h3>
+        <ul style="font-size:0.88rem; color:var(--color-text-muted);">
+            <li>ArcGIS REST API &mdash; FeatureService: developers.arcgis.com/rest/</li>
+            <li>City of Calgary CEAS services (FeatureServer links embedded in the project)</li>
+        </ul>
+    </div>
 
-    <p class="muted">If you want, I can add a short FAQ or copy of the exact curl commands used during debugging. Want me to add that?</p>
-  </main>
+    <hr class="section-divider">
+
+    <!-- Roadmap -->
+    <section class="animate-in">
+        <h2 style="text-align:center; margin-bottom:16px;">Data Roadmap</h2>
+        <p style="text-align:center; color:var(--color-text-muted); margin-bottom:24px;">Planned additions to expand transparency and coverage.</p>
+        <div class="roadmap-grid">
+            <div class="roadmap-card">
+                <span class="roadmap-badge in-progress">In Progress</span>
+                <h3>Real-Time Reservoir Levels</h3>
+                <p>Integrating Glenmore and Bearspaw reservoir telemetry feeds for live storage tracking.</p>
+            </div>
+            <div class="roadmap-card">
+                <span class="roadmap-badge planned">Planned</span>
+                <h3>Water Quality Metrics</h3>
+                <p>Turbidity, chlorine residuals, and E. coli test results from city lab data.</p>
+            </div>
+            <div class="roadmap-card">
+                <span class="roadmap-badge researching">Researching</span>
+                <h3>Neighbourhood-Level Data</h3>
+                <p>Exploring per-community consumption breakdowns from the Open Data portal.</p>
+            </div>
+            <div class="roadmap-card">
+                <span class="roadmap-badge planned">Planned</span>
+                <h3>Historical Rate Archive</h3>
+                <p>A time series of water/wastewater rate changes going back to 2010.</p>
+            </div>
+        </div>
+    </section>
+
+    <footer class="site-footer">
+        <b>Calgary Water Watch</b> &mdash; Open data for municipal water transparency and accountability.
+    </footer>
+</div>
+
 </body>
 </html>
