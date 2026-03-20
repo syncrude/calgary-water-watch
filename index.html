@@ -20,6 +20,12 @@
         
         .chart-container { position: relative; height: 400px; margin-bottom: 40px; border: 1px solid #eee; padding: 15px; border-radius: 8px; }
         .logic-box { background: #fff8e1; border-left: 5px solid #ffc107; padding: 20px; margin: 20px 0; border-radius: 0 8px 8px 0; }
+        /* Saddledome responsive layout */
+        .saddledome-row { display:flex; gap:20px; align-items:center; }
+        @media (max-width: 800px) {
+            .saddledome-row { flex-direction: column; }
+            .saddledome-stats { flex: none; }
+        }
         
         footer { font-size: 0.8rem; color: #888; text-align: center; margin-top: 50px; line-height: 1.5; }
         .error-msg { background: #fee; color: #c00; padding: 10px; border-radius: 5px; margin-bottom: 20px; display: none; }
@@ -40,36 +46,6 @@
 
     <div class="chart-container">
         <canvas id="waterChart"></canvas>
-    </div>
-    <div id="saddledome-block" style="margin-top:12px; text-align:center;">
-        <h2 id="dome-headline" style="margin:0; font-size:1.6rem; font-weight:700;">—</h2>
-
-        <div id="saddledome-visual" style="margin-top:12px; padding:12px; border-radius:8px; background:#fff4f6; border:1px solid #f5dbe0; max-width:960px; margin-left:auto; margin-right:auto;">
-            <div style="display:block;">
-                <svg id="saddledome-svg" class="svg-visualizer" viewBox="0 0 900 450" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;">
-                    <defs>
-                        <linearGradient id="waterGradIndex" x1="0" x2="0" y1="0" y2="1">
-                            <stop offset="0%" stop-color="#4299e1" />
-                            <stop offset="100%" stop-color="#2c5282" />
-                        </linearGradient>
-                        <mask id="domeMaskIndex">
-                            <path d="M 120,350 L 120,130 C 120,130 450,450 780,130 L 780,350 Z" fill="white" />
-                        </mask>
-                    </defs>
-                    <rect x="0" y="350" width="900" height="100" fill="#edf2f7" />
-                    <path d="M 120,350 L 120,130 C 120,130 450,450 780,130 L 780,350 Z" fill="#f1f5f9" stroke="#cbd5e0" stroke-width="2" />
-                    <rect x="0" y="0" width="900" height="450" fill="url(#waterGradIndex)" mask="url(#domeMaskIndex)" id="waterRectIndex" />
-                    <path id="waterSurfacePathIndex" d="M 0,0 V 0 H 900 V 450 H 0 Z" fill="#ffffff" mask="url(#domeMaskIndex)" />
-                </svg>
-            </div>
-        </div>
-
-        <div style="margin-top:12px; color:#234; font-weight:600; max-width:960px; margin-left:auto; margin-right:auto; text-align:left;">
-            <div style="font-size:0.95rem; color:#334">City leak volume (MLD): <b id="dome-ml">—</b></div>
-            <div style="margin-top:8px; font-size:0.95rem; color:#334">Equivalent of dome capacity (330 ML): <b id="dome-percent">—</b>%</div>
-            <div style="margin-top:8px; font-size:0.95rem; color:#334">Litres: <b id="dome-litres">—</b></div>
-            <div id="saddledome-text" style="margin-top:10px; color:#234; font-weight:600">—</div>
-        </div>
     </div>
 
     <div class="chart-container">
@@ -106,6 +82,39 @@
         </div>
     </div>
 
+    <div id="saddledome-block" style="margin-top:12px; text-align:center;">
+        <h2 id="dome-headline" style="margin:0; font-size:1.6rem; font-weight:700;">—</h2>
+
+            <div class="saddledome-inner" style="max-width:960px; margin:12px auto 0;">
+            <div class="saddledome-row" style="display:flex; gap:20px;">
+                <div class="saddledome-visual" style="flex:1; min-width:280px; padding:12px; border-radius:8px; background:#fff4f6; border:1px solid #f5dbe0;">
+                    <svg id="saddledome-svg" class="svg-visualizer" viewBox="0 0 900 450" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;">
+                        <defs>
+                            <linearGradient id="waterGradIndex" x1="0" x2="0" y1="0" y2="1">
+                                <stop offset="0%" stop-color="#4299e1" />
+                                <stop offset="100%" stop-color="#2c5282" />
+                            </linearGradient>
+                            <mask id="domeMaskIndex">
+                                <path d="M 120,350 L 120,130 C 120,130 450,450 780,130 L 780,350 Z" fill="white" />
+                            </mask>
+                        </defs>
+                        <rect x="0" y="350" width="900" height="100" fill="#edf2f7" />
+                        <path d="M 120,350 L 120,130 C 120,130 450,450 780,130 L 780,350 Z" fill="#f1f5f9" stroke="#cbd5e0" stroke-width="2" />
+                        <rect x="0" y="0" width="900" height="450" fill="url(#waterGradIndex)" mask="url(#domeMaskIndex)" id="waterRectIndex" />
+                        <path id="waterSurfacePathIndex" d="M 0,0 V 291 C 120,291 450,334 780,291 V 0 H 0 Z" fill="#ffffff" mask="url(#domeMaskIndex)" />
+                    </svg>
+                </div>
+
+                <div class="saddledome-stats" style="flex:0 0 360px; text-align:left; color:#234; font-weight:600;">
+                    <div style="font-size:0.95rem; color:#334">City leak volume (MLD): <b id="dome-ml">—</b></div>
+                    <div style="margin-top:8px; font-size:0.95rem; color:#334">Equivalent of dome capacity (330 ML): <b id="dome-percent">—</b></div>
+                    <div style="margin-top:8px; font-size:0.95rem; color:#334">Litres: <b id="dome-litres">—</b></div>
+                    <div style="margin-top:8px; font-size:0.95rem; color:#334">Estimated daily cost (@ $1.7409 / m³): <b id="dome-cost">—</b></div>
+                    <div id="saddledome-text" style="margin-top:10px; color:#234; font-weight:600">—</div>
+                </div>
+            </div>
+        </div>
+    </div>
     <!-- consolidated Saddledome block above (title, graphic, description) -->
 
     <div class="logic-box">
@@ -188,6 +197,8 @@ async function initDashboard() {
         const START_Y = 350;
         const END_CENTER_Y = 300;
         const END_SIDE_Y = 160;
+        // Residential rate per cubic metre (user provided)
+        const RATE_PER_M3 = 1.7409;
 
         function updateSaddledomeDisplay(leakML, label) {
             const textBlock = document.getElementById('saddledome-text');
@@ -201,6 +212,10 @@ async function initDashboard() {
             const pct = Math.max(0, Math.min(100, (leakML / DOME_CAPACITY_ML) * 100));
             const pctRounded = Math.round(pct);
             const liters = Math.round(leakML * 1_000_000).toLocaleString();
+            // compute daily cost: leakML (ML) * 1000 (m3 per ML) * ratePerM3
+            const costDaily = leakML * 1000 * RATE_PER_M3;
+            const costEl = document.getElementById('dome-cost');
+            if (costEl) costEl.innerText = '$' + costDaily.toFixed(2);
 
             // update numeric fields
             if (mlEl) mlEl.innerText = leakML.toFixed(1) + ' MLD';
